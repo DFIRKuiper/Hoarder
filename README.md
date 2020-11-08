@@ -180,7 +180,7 @@ Hoarder also support the execution of system commands. The following example sho
 ## Rhaegal Rules
 
 To write a Rhaegal rules, following the schema
-```
+```yaml
 public hoarder_executed
 {
     metadata:
