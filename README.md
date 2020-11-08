@@ -177,7 +177,27 @@ Hoarder also support the execution of system commands. The following example sho
 
 ## Running and freezing from source
 
-### Environment
+## Rhaegal Rules
+
+To write a Rhaegal rules, following the schema
+```
+public hoarder_executed
+{
+    metadata:
+      author: "Saleh Bin Muhaysin"
+      creationDate: "07/11/2020"
+      score: 60
+      description: "Detect running hoarder on the system"
+    channel: "Amcache"
+    include:
+      Path: "*hoarder.exe"
+}
+```
+- *hoarder_executed* this is the rule name
+- *metadata* contains metadata information about the rule
+- *channel* the data type of record (same as data type of Kuiper, and parser name of MasterParser)
+- *include* condition of rule detection
+- *Path* field name
 
 
 ### Installing Dependencies
