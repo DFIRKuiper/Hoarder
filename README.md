@@ -191,6 +191,8 @@ public hoarder_executed
     channel: "Amcache"
     include:
       Path: "*hoarder.exe"
+    exclude:
+      Path: "*Desktop*"
 }
 ```
 - *hoarder_executed* this is the rule name
