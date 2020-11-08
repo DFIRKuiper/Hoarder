@@ -15,7 +15,7 @@ To add easy of use and help analysts, we combined multiple tools in same repo., 
 - Visulization: [Kuiper](https://github.com/DFIRKuiper/Kuiper)
 
 ## Executable Releases:
-You may find the latest windows binary release [here](https://github.com/muteb/Hoarder/releases/latest)
+You may find the latest windows binary release [here](https://github.com/DFIRKuiper/Hoarder/releases/latest)
 
 **Note on 32-bit release:** as of Hoarder 4.0.0, the 32-bit binary is no longer released. If you want to run hoarder in 32-bit endpoint, you can refer to the latest [32-bit release](https://github.com/muteb/Hoarder/releases/tag/3.2.0).
 
@@ -134,8 +134,8 @@ It can also be a list. Example:
 	
 ```yaml
     parsers:
-	- '<|parsingdir|>MasterParser.exe -p WMI_Persistence -i <|path|OBJECTS.DATA> -o <|output|WMI_Persistence.kjson>'
-	- '<|parsingdir|>MasterParser.exe -p RUA -i <|path|OBJECTS.DATA> -o <|output|RUA.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p WMI_Persistence -i <|path|OBJECTS.DATA> -o <|output|WMI_Persistence.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p RUA -i <|path|OBJECTS.DATA> -o <|output|RUA.kjson>'
 ```
 * **description** : a description about the artifact. This key is used in hoarder command line to show information about the artifact.
 
@@ -177,7 +177,29 @@ Hoarder also support the execution of system commands. The following example sho
 
 ## Running and freezing from source
 
-### Environment
+## Rhaegal Rules
+
+To write a Rhaegal rules, following the schema
+```yaml
+public hoarder_executed
+{
+    metadata:
+      author: "Saleh Bin Muhaysin"
+      creationDate: "07/11/2020"
+      score: 60
+      description: "Detect running hoarder on the system"
+    channel: "Amcache"
+    include:
+      Path: "*hoarder.exe"
+    exclude:
+      Path: "*Desktop*"
+}
+```
+- *hoarder_executed* this is the rule name
+- *metadata* contains metadata information about the rule
+- *channel* the data type of record (same as data type of Kuiper, and parser name of MasterParser)
+- *include* condition of rule detection
+- *Path* field name
 
 
 ### Installing Dependencies
