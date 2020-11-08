@@ -252,5 +252,4 @@ This project built by the team (except some of the parsers).
 - [Saleh Bin Muhaysin](https://twitter.com/saleh_muhaysin)
 - [AbdulRhman Alfaifi](https://twitter.com/A__ALFAIFI)
 - [Abdulaziz Alwashmi](https://twitter.com/AlwashmiA)
-- [Abdullah Alrasheed](https://twitter.com/abdullah_rush)
 
