@@ -18,8 +18,9 @@ import re
 import shutil
 import traceback
 import ctypes
+import time
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"
 
 # get working dir path:
 if hasattr(sys, 'frozen') and hasattr(sys, '_MEIPASS'): # running from frozen exe
@@ -33,15 +34,25 @@ hoarder_config = "Hoarder.yml"
 def init_hoarder():
     
     # Add the static arguments:
-    args_set = argparse.ArgumentParser(description="Hoarder is a tool to collect and parse windows artifacts.\n\n")
+    priority = """
+                1: BELOW_NORMAL_PRIORITY_CLASS
+                2: IDLE_PRIORITY_CLASS (default)
+                3: NORMAL_PRIORITY_CLASS
+                4: ABOVE_NORMAL_PRIORITY_CLASS
+                5: HIGH_PRIORITY_CLASS
+                6: REALTIME_PRIORITY_CLASS
+                """
+    args_set = argparse.ArgumentParser(description="Hoarder " + __version__ + " is a tool to collect and parse windows artifacts.\n\n")
 
-    args_set.add_argument('-V', '--version', action="store_true", help='Print Hoarder version number.')
-    args_set.add_argument('-v', '--verbose', action="store_true", help='Print details of hoarder message in console.')
-    args_set.add_argument('-vv', '--very_verbose', action="store_true", help='Print more details (DEBUG) of hoarder message in console.')
+    args_set.add_argument('-V', '--version', action="store_true", help='Print Hoarder version number')
+    args_set.add_argument('-v', '--verbose', action="store_true", help='Print details of hoarder message in console')
+    args_set.add_argument('-vv', '--very_verbose', action="store_true", help='Print more details (DEBUG) of hoarder message in console')
     args_set.add_argument('-a', '--all', action="store_true", help='Get all (Default)')
-    args_set.add_argument('-f', '--image_file', help='Use disk image as data source instead of the live machine disk image ')
+    args_set.add_argument('-f', '--image_file', help='Use disk image as data source instead of the live machine disk image')
     args_set.add_argument('-pa', '--parse_artifacts', action="store_true", help='Parse artifacts')
     args_set.add_argument('-n', '--no_raw_files', action="store_true", help='Only bring parsed output. Do not bring any raw evidence files')
+    args_set.add_argument('-sp', '--set_priority', choices=[1, 2, 3, 4, 5, 6], default=2, type=int, help='Will run Hoarder process with the selected priority. ' + priority)
+    args_set.add_argument('-r', '--Rhaegal', action="store_true", help='Enable detection using Rhaegal rules, only possible if parsing enabled (-sp), default not enabled')
 
     # set arguments for plugins:
     argsplugins = args_set.add_argument_group('Plugins')
@@ -209,6 +220,7 @@ class Hoarder:
     options      = []
     plugins      = Plugins()
     parsers         = []
+    MP_parsers   = "MP_parser.json"
 
     FILE_TYPE_LOOKUP = {
       pytsk3.TSK_FS_NAME_TYPE_UNDEF: "-",
@@ -244,7 +256,8 @@ class Hoarder:
                 compress_method = zipfile.ZIP_DEFLATED  ,
                 image_path      = None                  ,
                 parse_level     = 0                     ,
-                groups          = []
+                groups          = []                    ,
+                Rhaegal         = False
                 ):
          
         self.options            = options 
@@ -256,6 +269,8 @@ class Hoarder:
         self.disk_drive         = "C:"
         self.parse_level        = parse_level
         self.groups             = groups
+        self.Rhaegal            = Rhaegal
+
         if self.output is None:
             self.output         = os.path.join(os.path.dirname(sys.argv[0]),self.hostname + ".zip")
         
@@ -651,7 +666,7 @@ class Hoarder:
             
                 if plugin_output[0]:
                     self.logging("INFO" , "Plugin ["+plugin+"] finished successfuly")
-                    self.ZipWriteFile(plugin_output[1] , plugin + ".txt")
+                    self.ZipWriteFile(plugin_output[1] , "plugins/" + plugin + ".txt")
                 else:
                     self.logging("ERROR" , "Plugin ["+plugin+"] failed, reason: " + plugin_output[1])
         except Exception as e:
@@ -664,21 +679,37 @@ class Hoarder:
         enabled_cmd = [ea for ea in self.config if 'cmd' in self.config[ea] and (ea in self.options or len(self.options) == 0)]
         self.logging("INFO" , "Enabled Commands: " + str(len(enabled_cmd)))
         
+        parsing_path = "."
+        if hasattr(sys, 'frozen') and hasattr(sys, '_MEIPASS'): # running from frozen exe
+            parsing_path = os.path.join(sys._MEIPASS)
+        else:
+            parsing_path = os.path.join(os.path.dirname(sys.argv[0]))
+
         for i in enabled_cmd:
             command = self.config[i]['cmd']
             output  = self.config[i]['output']
             self.logging("INFO" , "Command: " + command)
             try:
-                p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                out,err = p.communicate()
-                self.ZipWriteFile(out.decode('utf-8') , output + "\output.txt")
+                with open(output + ".txt", "w+") as of:
+                    p = subprocess.Popen(command, shell=True, cwd=parsing_path, universal_newlines=True, stdout=of, stderr=of)
+                    out,err = p.communicate()
+                    if os.path.exists(output + ".txt"):
+                        with open(output + ".txt", 'rb') as fl:
+                            content = fl.read()
+                            self.ZipWriteFile(content.decode('utf-8') , "commands/" + output + ".txt")
+                if os.path.exists(output + ".txt"):
+                    os.remove(output + ".txt")
+
             except Exception as e:
-                self.logging("ERR" , "Failed executing the command - reason: " + str(e))
+                self.logging("ERROR" , "Failed executing the command - reason: \n" + traceback.format_exc())
         
     # read the configuration file
     def GetYamlConfig(self, conf_file):
         # Locate and open the configuration file.
         yaml_path = os.path.join(hoarder_wd, hoarder_config)
+        if hasattr(sys, 'frozen') and hasattr(sys, '_MEIPASS'): # running from frozen exe
+            if os.path.exists(os.path.join(os.path.dirname(sys.argv[0]),hoarder_config)):
+                yaml_path = os.path.join(os.path.dirname(sys.argv[0]), hoarder_config)
         if os.path.exists(yaml_path):
             yaml_file = open(yaml_path, 'r')
         else:
@@ -755,9 +786,12 @@ class Hoarder:
         # log start of parsing
         self.logging("INFO", "Started parsing...")
         # initialize tracking lists (commands and cleanup lists):
-        all_commands = []
-        parsers_to_delete = []
-        files_to_delete = []
+        all_commands        = []
+        parsers_to_delete   = []
+        files_to_delete     = []
+        MP_parser_list      = [] # contains the list of parser commands for MasterParser
+        uniq_num            = 0 
+
 
         # Get the list of enabled artifacts:
         enabled_artifacts = self.get_enabled_artifacts()
@@ -782,7 +816,7 @@ class Hoarder:
         if hasattr(sys, 'frozen') and hasattr(sys, '_MEIPASS'): # running from frozen exe
             parsing_path = os.path.join(sys._MEIPASS,'parsing_out')
         else:
-            parsing_path = os.path.join(os.path.dirname(sys.argv[0]),'parsing_out')
+            parsing_path = os.path.dirname(os.path.realpath(__file__))  + "\\" + os.path.join(os.path.dirname(sys.argv[0]),'parsing_out')
         try:
             if not os.path.exists(parsing_path):
                 os.mkdir(parsing_path) # parsing directory contains all parsers and files to parse
@@ -805,11 +839,11 @@ class Hoarder:
 
         # Main parsing block:
         try:
-
+            
             # look for and handle parsers in the config
             for artifact in enabled_artifacts:
                 # counter to unique filenames in handling commands' inputs and outputs (incremented everytime used):
-                uniq_num = 0
+                
                 if 'parsers' in self.config[artifact]:
                     # create a folder for this artifact under parsing_out:
                     os.mkdir(os.path.join(parsing_dir.replace('?',' '),artifact))
@@ -889,7 +923,7 @@ class Hoarder:
                                                 # if directive is <|path|\myApp\>, RegEx will be ".*\\artifact\\the path regex\\myApp\\.*"
                                                 # directory directive ends with a \ which means it will be replicated with handling escapes
                                                 # so, it \\\\ needs to be replaced with \\ in the regex to mitigate replication:
-                                                _re = re.compile((".*" + artifact + path_re + directive[7:-1]).replace("\\","\\\\").replace("\\\\\\\\","\\\\").replace("$","\\$") + ".*", re.IGNORECASE)
+                                                _re = re.compile((".*" + artifact + path_re + directive[7:-1]).replace("\\","\\\\").replace("\\\\\\\\","\\\\").replace("\\.*\\", "").replace("$","\\$") + ".*", re.IGNORECASE)
                                                 if re.fullmatch(_re, flp.replace('/','\\')):
                                                     # extract the matched file (with dir structure) in the created dir:
                                                     if not flp.endswith('/'):
@@ -916,12 +950,15 @@ class Hoarder:
                                                     # extract the file:
                                                     f = self.zfile.open(flp)
                                                     content = f.read()
+                                                    f.close()
                                                     f = open(curr_file_name.replace('?',' '),'wb')
                                                     f.write(content)
                                                     f.close()
                                                     files_to_delete.append(curr_file_name.replace('?',' '))
                                                     # handle replace directives in the raw_command and add it to the all_commands list:
-                                                    all_commands.append(raw_command.replace(directive , curr_file_name).replace("|output|" , parsing_dir + "\\" + artifact + "\\" + vol_str + "_parse_out_" + str(uniq_num)).replace("<|parsingdir|>", parsing_dir + "\\").replace('<','').replace('>',''))
+                                                    output_path =parsing_dir + "\\" + artifact + "\\" + vol_str + "_parse_out_" + str(uniq_num) + "\\"
+                                                    os.mkdir(output_path)
+                                                    all_commands.append(raw_command.replace(directive , curr_file_name).replace("|output|" , output_path).replace("<|parsingdir|>", parsing_dir + "\\").replace('<','').replace('>',''))
                                                     uniq_num = uniq_num + 1
 
                             
@@ -941,16 +978,55 @@ class Hoarder:
 
                         # run all commands for generated from a single command, clear them, and delete the files_to_delete to save space:
                         # run the commands:
+                        
                         for cmd in all_commands:
-                            self.run_parser_command(cmd, os.path.dirname(parsing_dir))
-                        # delete run commands:
-                        all_commands.clear()
-                        # delete files_to_delete:
-                        self.delete_files(files_to_delete)
-                        # clear deleted files:
-                        files_to_delete.clear()
+                            # if the parser is MasterParser, then write the configuration to MP parser file
+                            if cmd.split(" ")[0].endswith("MasterParser.exe"):
+                                try:
+                                    cmd_splited = cmd.split(" ")
+                                    MP_parser = {}
+                                    for i in range(len(cmd_splited)):
+                                        if cmd_splited[i] == "-p" or cmd_splited[i] =="--parser":
+                                            MP_parser['parser'] = cmd_splited[i+1]
+                                        if cmd_splited[i] == "-i" or cmd_splited[i] =="--infile":
+                                            MP_parser['inFile'] =  cmd_splited[i+1].replace('?',' ')
+                                        if cmd_splited[i] == "-o" or cmd_splited[i] =="--outfile":
+                                            MP_parser['outFile'] =  cmd_splited[i+1].replace('?',' ')
+                                    
+                                    if len(MP_parser.keys()):
+                                        MP_parser_str = json.dumps(MP_parser)
+                                        self.logging("INFO", "MasterParser parser added to configuration: " + MP_parser_str )
+                                        MP_parser_list.append(MP_parser_str)
 
-        
+                                except Exception as e:
+                                    # if failed to collect MP parser file, then run the command normally
+                                    self.run_parser_command(cmd, os.path.dirname(parsing_dir)) 
+                                    
+                            else:
+                                self.run_parser_command(cmd, os.path.dirname(parsing_dir))
+                        
+                       
+            if len(MP_parser_list):
+                MP_parsers_path = parsing_dir + "\\" +self.MP_parsers
+                MP_parser_file_str = '\n'.join(MP_parser_list)
+                
+                with open(MP_parsers_path , 'w') as MP_parser_file:
+                    MP_parser_file.write(MP_parser_file_str)
+                    self.logging("INFO", "MasterParser configuration file written: " + MP_parsers_path )
+                    rhaegal_cmd_opt = " -r "+parsing_dir+"\\rules.zip" if self.Rhaegal else ""
+                    cmd = parsing_dir + "\\MasterParser.exe -pf " + MP_parsers_path + " -v" + rhaegal_cmd_opt
+                    self.logging("INFO", "MasterParser run command : " + cmd )
+                
+                self.run_parser_command(cmd, os.path.dirname(parsing_dir)) 
+
+            # delete run commands:
+            all_commands.clear()
+            # delete files_to_delete:
+            self.delete_files(files_to_delete)
+            # clear deleted files:
+            files_to_delete.clear()
+
+            
         except Exception as e:
             self.logging("ERROR", "Error in main parsing block. Artifact: " + artifact + " (exception: " + str(e) + ")\n" + traceback.format_exc())
             pass
@@ -987,18 +1063,15 @@ class Hoarder:
 
     # runs a parser command
     def run_parser_command(self, command, wd):
-        # to complete handling spaces, split the command by space to seperate the command and the args:
+        # to complete handling spaces, split the command by space to seperate the args:
         cmd = command.split()
         for i in range(len(cmd)):
             cmd[i] = cmd[i].replace('?',' ')
         
         # run the command:
         self.logging("DEBUG", "parser: running the command '" + str(cmd) + "'...")
-        p = subprocess.Popen(cmd, cwd=wd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(cmd, cwd=wd)
         out,err = p.communicate()
-        self.logging("DEBUG", "parser: command '" + str(cmd) + "' run. std.err:" + str(err) + ". stdout:" + str(out))
-        # I chose not to log or output std.out to supress large output.
-        # If std.out needed in the future, here is where it should be handled
 
     # deletes all files in a list:
     def delete_files(self, files_to_delete):
@@ -1049,13 +1122,26 @@ def is_user_admin():
 
 # Main function
 def main():
-    # Set Process Priority:
-    p = psutil.Process(os.getpid())
-    p.nice(psutil.HIGH_PRIORITY_CLASS)
-
     #initialize arguments:
     args = init_hoarder()
     
+    # Set Process Priority:
+    p = psutil.Process(os.getpid())
+    if args.set_priority == 1:
+        p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+    elif args.set_priority == 2:
+        p.nice(psutil.IDLE_PRIORITY_CLASS)
+    elif args.set_priority == 3:
+        p.nice(psutil.NORMAL_PRIORITY_CLASS)
+    elif args.set_priority == 4:
+        p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
+    elif args.set_priority == 5:
+        p.nice(psutil.HIGH_PRIORITY_CLASS)
+    elif args.set_priority == 6:
+        p.nice(psutil.REALTIME_PRIORITY_CLASS)
+    else:
+        print("ERROR: Invalid priority.")
+
     if args.version:
         print("Hoarder v" + __version__)
         
@@ -1065,11 +1151,11 @@ def main():
         groups = []
         v = vars(args)
         for a in v:
-            if a in ['all' , 'version' , 'verbose' , 'very_verbose' , "image_file"]:
+            if a in ['all' , 'version' , 'verbose' , 'very_verbose' , "image_file" , "Rhaegal"]:
                 continue
-            if v[a]:
+            if v[a] and a != "set_priority":
                 options.append(a) 
-        
+
         # if user admin run hoarder:
         if is_user_admin():
             # Deduce verbose level:
@@ -1093,7 +1179,8 @@ def main():
                 options.remove('groups')
 
             image_file = args.image_file
-            h = Hoarder(hoarder_config , options=options , enabled_verbose=verbose , image_path = image_file, parse_level = parse_level, groups = groups)  
+            print(options)
+            h = Hoarder(hoarder_config , options=options , enabled_verbose=verbose , image_path = image_file, parse_level = parse_level, groups = groups, Rhaegal=args.Rhaegal)  
             
         else:
             # Re-run the program with admin rights

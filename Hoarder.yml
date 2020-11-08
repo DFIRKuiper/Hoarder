@@ -20,8 +20,6 @@ output_Content:
 #               , for example <|output|amcache_command1> and the suffix will be added.
 # - <|parsingdir|>: this will be replaced with the path where all files in parsers.zip are extracted. This directive doesn't take a suffix.
 #                   this directive needs to proceed any use of a tool or supplied input in the parsers.zip.
-# Note: std.out is not logged or captured. std.err of run commands is logged in Hoarder.log. So, a command needs to handle output in an argument.
-#       If it doesn't a batch file can be created to overcome this limitation.
 # groups: groups are like tags and each artifact can be set to be part of one or more groups.
 #         In hoarder command line, one or more group(s) can be chosen and the artifacts tagged
 #         by this group will be used.
@@ -36,7 +34,7 @@ all_artifacts:
       path64: '\windows\system32\winevt\Logs\'
       groups: 'parsing'
       files: '*'
-      parsers: '<|parsingdir|>MasterParser.exe -p winevents -i <|path|.*> -o <|output|evtx.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p Events -i <|path|\> -o <|output|evtx.kjson>'
       description: 'Windows event logs'
 
   Ntfs: 
@@ -48,7 +46,7 @@ all_artifacts:
       - $MFT
       - $MFTMirr
       - $LogFile
-      parsers: '<|parsingdir|>MasterParser.exe -p mft -i <|path|$MFT> -o <|output|mft.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p MFT_parser -i <|path|$MFT> -o <|output|mft.kjson>'
       description: '$MFT file'
 
   Recent:
@@ -56,7 +54,9 @@ all_artifacts:
       path32: '\Users\*\AppData\Roaming\Microsoft\Windows\Recent\**'
       path64: '\Users\*\AppData\Roaming\Microsoft\Windows\Recent\**'
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p jumplist -i <|path|\> -o <|output|recent.json>'
+      parsers: 
+        - '<|parsingdir|>MasterParser.exe -p JumpList -i <|path|.*(automaticDestinations-ms|customDestinations-ms)> -o <|output|jumplist.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p LNK -i <|path|.*(.lnk)> -o <|output|LNK.kjson>'
       description: 'Recently opened files'
 
   Startup:
@@ -69,8 +69,6 @@ all_artifacts:
       output: 'srum'
       path32: '\Windows\System32\SRU\**'
       path64: '\Windows\System32\SRU\**'
-      groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p srum -i <|path|SRUDB.dat> -o <|output|srum.json>'
       description: 'SRUM folder'
 
   Firwall:
@@ -88,7 +86,7 @@ all_artifacts:
       - '\system32\ccm\logs\**'
       - '\Windows\ccm\logs\**'
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p sccm -i <|path|.*> -o <|output|sccm.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p sccm_parser -i <|path|.*> -o <|output|sccm.kjson>'
       description: 'CCM Logs'
       
   WindowsIndexSearch:
@@ -113,21 +111,37 @@ all_artifacts:
       - ELAM
       - COMPONENTS
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p regsk -i <|path|\> -o <|output|config.json>'
+      parsers: 
+        - '<|parsingdir|>MasterParser.exe -p Bam -i <|path|SYSTEM> -o <|output|Bam.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p TimeZoneInformation -i <|path|SYSTEM> -o <|output|TimeZoneInformation.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p ComputerName -i <|path|SYSTEM> -o <|output|ComputerName.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p DHCP -i <|path|SYSTEM> -o <|output|DHCP.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p PortForwading -i <|path|SYSTEM> -o <|output|PortForwading.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p ShellExtensions -i <|path|SOFTWARE> -o <|output|ShellExtensions.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p InstalledComponents -i <|path|SOFTWARE> -o <|output|InstalledComponents.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p InstalledApp -i <|path|SOFTWARE> -o <|output|InstalledApp.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p Uninstall -i <|path|SOFTWARE> -o <|output|Uninstall.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p ProfileList -i <|path|SOFTWARE> -o <|output|ProfileList.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p LaunchTracing -i <|path|SOFTWARE> -o <|output|LaunchTracing.kjson>'
       description: 'System hives'
   
   
   Ntuser: 
       output: 'Ntuser'
-      path32: 
-      - '\Users\*\'
-      - '\Windows\System32\config\systemprofile\'
-      path64: 
-      - '\Users\*\'
-      - '\Windows\System32\config\systemprofile\'
+      path32: '\Users\*\'
+      path64: '\Users\*\'
       files:  'NTUSER.DAT*'
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p regsk -i <|path|\> -o <|output|ntuser.json>'
+      parsers: 
+        - '<|parsingdir|>MasterParser.exe -p UserAssist -i <|path|NTUSER.DAT> -o <|output|UserAssist.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p OpenSaveMRU -i <|path|NTUSER.DAT> -o <|output|OpenSaveMRU.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p LastVisitedMRU -i <|path|NTUSER.DAT> -o <|output|LastVisitedMRU.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p AppCompatFlags -i <|path|NTUSER.DAT> -o <|output|AppCompatFlags.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p Sysinternals -i <|path|NTUSER.DAT> -o <|output|Sysinternals.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p RunMRU -i <|path|NTUSER.DAT> -o <|output|RunMRU.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p TypedUrls -i <|path|NTUSER.DAT> -o <|output|TypedUrls.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p WordWheelQuery -i <|path|NTUSER.DAT> -o <|output|WordWheelQuery.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p TerminalServerClient -i <|path|NTUSER.DAT> -o <|output|TerminalServerClient.kjson>'
       description: 'All users hives'
   
   applications: 
@@ -135,7 +149,7 @@ all_artifacts:
       path32: '\Windows\AppCompat\Programs\**'
       path64: '\Windows\AppCompat\Programs\**'
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p regsk -i <|path|\> -o <|output|amcache.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p Amcache -i <|path|Amcache.hve> -o <|output|amcache.kjson>'
       description: 'Amcache files'
   
   usrclass: 
@@ -144,7 +158,7 @@ all_artifacts:
       path64: '\Users\*\AppData\Local\Microsoft\Windows\'
       files:  'UsrClass.dat'
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p regsk -i <|path|\> -o <|output|usrclass.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p MuiCache -i <|path|UsrClass.dat> -o <|output|usrclass.kjson>'
       description: 'UserClass.dat file for all the users'
       
   PowerShellHistory: 
@@ -153,7 +167,7 @@ all_artifacts:
       path64: '\Users\*\Appdata\Roaming\Microsoft\Windows\PowerShell\PSReadline\'
       groups: 'parsing'
       files:  'ConsoleHost_history.txt'
-      parsers: '<|parsingdir|>MasterParser.exe -p pshistory -i <|path|ConsoleHost_history.txt> -o <|output|pshistory.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p PowerShellHistory -i <|path|ConsoleHost_history.txt> -o <|output|PowerShellHistory.kjson>'
       description: 'PowerShell history for all the users'
 
     
@@ -163,7 +177,7 @@ all_artifacts:
       path64: '\$Recycle.Bin\**'
       groups: 'parsing'
       files: '$I*'
-      parsers: '<|parsingdir|>MasterParser.exe -p recyclebin -i <|path|\> -o <|output|recyclebin.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p Recyclebin -i <|path|\> -o <|output|Recyclebin.kjson>'
       description: 'RecycleBin Files'
   
   WMI:
@@ -177,8 +191,8 @@ all_artifacts:
       groups: 'parsing'
       files:  'OBJECTS.DATA'
       parsers: 
-        - '<|parsingdir|>MasterParser.exe -p wmipersistence -i <|path|OBJECTS.DATA> -o <|output|wmipersistence.json>'
-        - '<|parsingdir|>MasterParser.exe -p rua -i <|path|OBJECTS.DATA> -o <|output|wmirua.json>'
+        - '<|parsingdir|>MasterParser.exe -p WMI_Persistence -i <|path|OBJECTS.DATA> -o <|output|WMI_Persistence.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p RUA -i <|path|OBJECTS.DATA> -o <|output|RUA.kjson>'
       description: 'WMI OBJECTS.DATA file'
   
   scheduled_task:
@@ -190,7 +204,7 @@ all_artifacts:
       - '\Windows\System32\Tasks\**'
       - '\Windows\SysWOW64\Tasks\**'
       groups: 'parsing'
-      parsers: '<|parsingdir|>MasterParser.exe -p scheduledtasks -i <|path|\> -o <|output|scheduledtasks.json>'
+      parsers: '<|parsingdir|>MasterParser.exe -p Scheduled_Task -i <|path|\> -o <|output|Scheduled_Task.kjson>'
       description: 'Scheduled Tasks files'
       
   BMC:
@@ -206,7 +220,7 @@ all_artifacts:
     path64: '\Windows\prefetch\'
     files:  '*.pf'
     groups: 'parsing'
-    parsers: '<|parsingdir|>MasterParser.exe -p prefetch -i <|path|\> -o <|output|prefetch.json>'
+    parsers: '<|parsingdir|>MasterParser.exe -p Prefetch -i <|path|\> -o <|output|Prefetch.kjson>'
     description: 'Prefetch files'
 
   WMITraceLogs:
@@ -218,17 +232,17 @@ all_artifacts:
   BrowserHistory:
     output: 'BrowserHistory'
     path32: 
-    - '\Users\*\AppData\Roaming\Google\Chrome\User Data\Default\**'
-    - '\Users\*\AppData\local\Google\Chrome\User Data\Default\**'
-    - '\Users\*\AppData\Local\Microsoft\Windows\INetCookies\**'
-    - '\Users\*\AppData\Local\Microsoft\Windows\WebCache\**'
-    - '\Users\*\AppData\Roaming\Mozilla\Firefox\Profiles\**'
+    - '\Users\*\AppData\Roaming\Google\Chrome\User Data\Default\'
+    - '\Users\*\AppData\local\Google\Chrome\User Data\Default\'
+    - '\Users\*\AppData\Local\Microsoft\Windows\INetCookies\'
+    - '\Users\*\AppData\Local\Microsoft\Windows\WebCache\'
+    - '\Users\*\AppData\Roaming\Mozilla\Firefox\Profiles\'
     path64: 
-    - '\Users\*\AppData\Roaming\Google\Chrome\User Data\Default\**'
-    - '\Users\*\AppData\local\Google\Chrome\User Data\Default\**'
-    - '\Users\*\AppData\Local\Microsoft\Windows\INetCookies\**'
-    - '\Users\*\AppData\Local\Microsoft\Windows\WebCache\**'
-    - '\Users\*\AppData\Roaming\Mozilla\Firefox\Profiles\**'
+    - '\Users\*\AppData\Roaming\Google\Chrome\User Data\Default\'
+    - '\Users\*\AppData\local\Google\Chrome\User Data\Default\'
+    - '\Users\*\AppData\Local\Microsoft\Windows\INetCookies\'
+    - '\Users\*\AppData\Local\Microsoft\Windows\WebCache\'
+    - '\Users\*\AppData\Roaming\Mozilla\Firefox\Profiles\'
     files:  
     - 'History*'
     - 'Cache'
@@ -238,17 +252,17 @@ all_artifacts:
     - 'cookies.sqlite'
     groups: 'parsing'
     parsers: 
-      - '<|parsingdir|>MasterParser.exe -p browserhistory -i <|path|History> -o <|output|chromehistory.json>'
-      - '<|parsingdir|>MasterParser.exe -p browserhistory -i <|path|WebCacheV01.dat> -o <|output|iehistory.json>'
-      - '<|parsingdir|>MasterParser.exe -p browserhistory -i <|path|places.sqlite> -o <|output|firefoxhistory.json>'
+      - '<|parsingdir|>MasterParser.exe -p Browser_History -i <|path|History> -o <|output|chromehistory.kjson>'
+      - '<|parsingdir|>MasterParser.exe -p Browser_History -i <|path|WebCacheV01.dat> -o <|output|iehistory.kjson>'
+      - '<|parsingdir|>MasterParser.exe -p Browser_History -i <|path|places.sqlite> -o <|output|firefoxhistory.kjson>'
     description: 'BrowserHistory Data'
 
   WERFiles:
     output: 'WER'
-    path32: '\ProgramData\Microsoft\Windows\WER\**'
-    path64: '\ProgramData\Microsoft\Windows\WER\**'
+    path32: '\ProgramData\Microsoft\Windows\WER\ReportArchive\**'
+    path64: '\ProgramData\Microsoft\Windows\WER\ReportArchive\**'
     groups: 'parsing'
-    parsers: '<|parsingdir|>MasterParser.exe -p wer -i <|path|\> -o <|output|wer.json>'
+    parsers: '<|parsingdir|>MasterParser.exe -p WER -i <|path|\> -o <|output|wer.kjson>'
     description: 'Windows Error Reporting Files'
     
   BitsAdmin:
@@ -256,22 +270,7 @@ all_artifacts:
     path32: '\ProgramData\Microsoft\Network\Downloader\**'
     path64: '\ProgramData\Microsoft\Network\Downloader\**'
     groups: 'parsing'
-    parsers: '<|parsingdir|>MasterParser.exe -p bitsadmin -i <|path|qmgr.db> -o <|output|bitsadmin.json>'
     description: 'Bits Admin Database (QMGR database)'
-  
-  CertUtilCache:
-    output: 'CertUtilCache'
-    path32: 
-    - '\Windows\System32\config\systemprofile\AppData\LocalLow\Microsoft\CryptnetUrlCache\**'
-    - '\Windows\SysWOW64\config\systemprofile\AppData\LocalLow\Microsoft\CryptnetUrlCache\**'
-    - '\Users\*\AppData\LocalLow\Microsoft\CryptnetUrlCache\**'
-    path64:
-    - '\Windows\System32\config\systemprofile\AppData\LocalLow\Microsoft\CryptnetUrlCache\**'
-    - '\Windows\SysWOW64\config\systemprofile\AppData\LocalLow\Microsoft\CryptnetUrlCache\**'
-    - '\Users\*\AppData\LocalLow\Microsoft\CryptnetUrlCache\**'
-    description: 'CertUtilCache files (metadata & content)'
-
-  # Commands
   
   SystemInfo:
     output: 'SystemInfo'
