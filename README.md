@@ -134,8 +134,8 @@ It can also be a list. Example:
 	
 ```yaml
     parsers:
-	- '<|parsingdir|>MasterParser.exe -p WMI_Persistence -i <|path|OBJECTS.DATA> -o <|output|WMI_Persistence.kjson>'
-	- '<|parsingdir|>MasterParser.exe -p RUA -i <|path|OBJECTS.DATA> -o <|output|RUA.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p WMI_Persistence -i <|path|OBJECTS.DATA> -o <|output|WMI_Persistence.kjson>'
+        - '<|parsingdir|>MasterParser.exe -p RUA -i <|path|OBJECTS.DATA> -o <|output|RUA.kjson>'
 ```
 * **description** : a description about the artifact. This key is used in hoarder command line to show information about the artifact.
 
