@@ -15,7 +15,7 @@ To add easy of use and help analysts, we combined multiple tools in same repo., 
 - Visulization: [Kuiper](https://github.com/DFIRKuiper/Kuiper)
 
 ## Executable Releases:
-You may find the latest windows binary release [here](https://github.com/muteb/Hoarder/releases/latest)
+You may find the latest windows binary release [here](https://github.com/DFIRKuiper/Hoarder/releases/latest)
 
 **Note on 32-bit release:** as of Hoarder 4.0.0, the 32-bit binary is no longer released. If you want to run hoarder in 32-bit endpoint, you can refer to the latest [32-bit release](https://github.com/muteb/Hoarder/releases/tag/3.2.0).
 
