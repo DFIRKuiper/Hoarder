@@ -14,6 +14,12 @@ To add easy of use and help analysts, we combined multiple tools in same repo., 
 - Detection: [Rhaegal](https://github.com/AbdulRhmanAlfaifi/Rhaegal)
 - Visulization: [Kuiper](https://github.com/DFIRKuiper/Kuiper)
 
+
+<p align="center">
+<img alt="hoarder logo" src="https://github.com/DFIRKuiper/Hoarder/blob/main/hoarder_diagram.png?raw=true" title="hoarder" >
+</p>
+
+
 ## Executable Releases:
 You may find the latest windows binary release [here](https://github.com/DFIRKuiper/Hoarder/releases/latest)
 
