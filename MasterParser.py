@@ -145,21 +145,23 @@ class MasterParser:
 		
 
 		# Set Process Priority:
-		p = psutil.Process(os.getpid())
-		if priority == 1:
-			p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
-		elif priority == 2:
-			p.nice(psutil.IDLE_PRIORITY_CLASS)
-		elif priority == 3:
-			p.nice(psutil.NORMAL_PRIORITY_CLASS)
-		elif priority == 4:
-			p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
-		elif priority == 5:
-			p.nice(psutil.HIGH_PRIORITY_CLASS)
-		elif priority == 6:
-			p.nice(psutil.REALTIME_PRIORITY_CLASS)
-		else:
-			raise ValueError("Invalid priority.")
+		
+		if os.name == "nt":
+			p = psutil.Process(os.getpid())
+			if priority == 1:
+				p.nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+			elif priority == 2:
+				p.nice(psutil.IDLE_PRIORITY_CLASS)
+			elif priority == 3:
+				p.nice(psutil.NORMAL_PRIORITY_CLASS)
+			elif priority == 4:
+				p.nice(psutil.ABOVE_NORMAL_PRIORITY_CLASS)
+			elif priority == 5:
+				p.nice(psutil.HIGH_PRIORITY_CLASS)
+			elif priority == 6:
+				p.nice(psutil.REALTIME_PRIORITY_CLASS)
+			else:
+				raise ValueError("Invalid priority.")
 
 
 
