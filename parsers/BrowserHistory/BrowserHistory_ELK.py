@@ -116,7 +116,7 @@ def extract_webcachev01_dat(file_path):
 # places.sqlite path: C:\Users\<user-name>\AppData\Roaming\Mozilla\Firefox\Profiles\<profile-id>.default\places.sqlite 
 def extract_firefox_history(file_path):
 	#print file_path
-	conn = sqlite3.connect(file_path)
+	conn = sqlite3.connect("file:"+file_path+"?mode=ro", uri=True)
 	c = conn.cursor()
 	his = []
 	
@@ -264,7 +264,7 @@ def extract_firefox_history(file_path):
 # History path: %LocalAppData%\Google\Chrome\User Data\Default\History
 def extract_chrome_history(file_path):
 	#print file_path
-	conn = sqlite3.connect(file_path)
+	conn = sqlite3.connect("file:"+file_path+"?mode=ro", uri=True)
 	c = conn.cursor()
 	his = []
 	
